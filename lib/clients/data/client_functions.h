@@ -10,8 +10,23 @@
 #endif
 
 extern "C" {
-    EXPORT int add_client(int user_id, const char* name, const char* phone);
-    EXPORT int update_client(int user_id, int client_id, const char* name, const char* phone);
+    // إضافة عميل: تم تحديث التوقيع ليشمل الحقول الجديدة
+    EXPORT int add_client(int user_id, 
+                          const char* name, 
+                          const char* phone, 
+                          const char* email, 
+                          const char* address, 
+                          const char* notes);
+
+    // تعديل عميل: تم تحديث التوقيع ليتناسب مع تحديث البيانات الأساسية
+    EXPORT int update_client(int user_id, 
+                             int client_id, 
+                             const char* name, 
+                             const char* phone,
+                             const char* email,
+                             const char* address);
+
+    // حذف عميل: يبقى كما هو (يحتاج فقط المعرف والمسؤول)
     EXPORT int delete_client(int user_id, int client_id);
 }
 
