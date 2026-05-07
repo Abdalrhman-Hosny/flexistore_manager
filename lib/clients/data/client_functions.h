@@ -28,6 +28,8 @@ extern "C" {
 
     // حذف عميل: يبقى كما هو (يحتاج فقط المعرف والمسؤول)
     EXPORT int delete_client(int user_id, int client_id);
+    EXPORT const char* get_all_clients(int user_id);
+    EXPORT void free_client_string(char* ptr);
 }
 
 #endif
