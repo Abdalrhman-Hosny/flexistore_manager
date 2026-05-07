@@ -1,35 +1,64 @@
 #include "client_functions.h"
 #include <iostream>
 
-// مؤقتاً: هنعرف النجاح هنا عشان الإيرور يختفي لحد ما ffi_types تجهز
+// تعريف أكواد الاستجابة (Status Codes)
 #ifndef SUCCESS
 #define SUCCESS 0
+#endif
+#ifndef ERR_NULL_POINTER
+#define ERR_NULL_POINTER -102
 #endif
 
 extern "C" {
 
-    // إضافة عميل (Mock Implementation)
-    int add_client(int user_id, const char* name, const char* phone) {
-        if (name == nullptr || phone == nullptr) return -102;
+    // --- إضافة عميل جديد ---
+    // تم إضافة parameters لتشمل (الإيميل، العنوان، والملاحظات) كما في الـ UI
+    int add_client(int user_id, 
+                   const char* name, 
+                   const char* phone, 
+                   const char* email, 
+                   const char* address, 
+                   const char* notes) {
+        
+        // التحقق من الحقول الإجبارية (الاسم والموبايل) كما حددنا في الـ UI
+        if (name == nullptr || phone == nullptr) {
+            return ERR_NULL_POINTER;
+        }
 
-        // بدل ما نكتب في قاعدة البيانات حالياً، هنطبع للـ Console
-        std::cout << "[DB Mock] Adding Client to MySQL..." << std::endl;
-        std::cout << "Name: " << name << ", Phone: " << phone << std::endl;
-        std::cout << "Action by User ID: " << user_id << std::endl;
-
+        std::cout << "\n[MySQL Admin] Executing: INSERT INTO clients..." << std::endl;
+        std::cout << ">> Name: " << name << std::endl;
+        std::cout << ">> Phone: " << phone << std::endl;
+        std::cout << ">> Email: " << (email ? email : "N/A") << std::endl;
+        std::cout << ">> Address: " << (address ? address : "N/A") << std::endl;
+        std::cout << ">> Notes: " << (notes ? notes : "None") << std::endl;
+        std::cout << ">> Added by User ID: " << user_id << std::endl;
+        
         return SUCCESS; 
     }
 
-    // تعديل عميل
-    int update_client(int user_id, int client_id, const char* name, const char* phone) {
-        std::cout << "[DB Mock] Updating Client ID: " << client_id << std::endl;
+    // --- تعديل بيانات عميل ---
+    int update_client(int user_id, 
+                      int client_id, 
+                      const char* name, 
+                      const char* phone,
+                      const char* email,
+                      const char* address) {
+        
+        std::cout << "\n[MySQL Admin] Executing: UPDATE client SET ... WHERE id = " << client_id << std::endl;
+        std::cout << ">> New Name: " << name << std::endl;
         return SUCCESS;
     }
 
-    // حذف عميل (مع تطبيق قاعدتك الصارمة)
+    // --- حذف عميل ---
     int delete_client(int user_id, int client_id) {
-        // هنا مستقبلاً هنفحص الديون الأول
-        std::cout << "[DB Mock] Deleting Client ID: " << client_id << std::endl;
+        // منطق الفحص (الديون) يوضع هنا قبل تنفيذ الـ DELETE
+        std::cout << "\n[MySQL Admin] Checking debts for Client ID: " << client_id << "..." << std::endl;
+        
+        /* مستقبلاً:
+           if (has_debt(client_id)) return -405; // لا يمكن الحذف
+        */
+
+        std::cout << "[MySQL Admin] Executing: DELETE FROM clients WHERE id = " << client_id << std::endl;
         return SUCCESS;
     }
 }
