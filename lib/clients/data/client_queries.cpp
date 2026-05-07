@@ -1,20 +1,33 @@
 #include "client_functions.h"
 #include <iostream>
 #include <string>
-#include <cstdlib> // عشان دالة malloc
-#include <cstring> // عشان دالة strcpy
+#include <cstdlib> 
+#include <cstring> 
 
 extern "C" {
-    // دالة لجلب كل العملاء على هيئة JSON
+    // --- دالة جلب البيانات ---
     EXPORT const char* get_all_clients(int user_id) {
-        // مؤقتاً: سنرجع بيانات وهمية (Mock Data) بصيغة JSON
-        // لاحظ: في C++ الحقيقي، سنستخدم مكتبة مثل nlohmann/json
-        std::string mock_json = "[{\"id\":1, \"name\":\"Ahmed\", \"phone\":\"010...\", \"debt\":0.0}]";
+        // بيانات وهمية تحاكي ما سيأتي من MySQL لاحقاً
+        // أضفت لك بيانات أكثر لتجربة الجدول بشكل واقعي
+        std::string mock_json = "["
+            "{\"id\":1, \"name\":\"John Doe\", \"phone\":\"+123456\", \"email\":\"john@test.com\", \"status\":\"Active\", \"debt\":0.0},"
+            "{\"id\":2, \"name\":\"Sarah Smith\", \"phone\":\"+987654\", \"email\":\"sarah@test.com\", \"status\":\"Has Debt\", \"debt\":1200.50}"
+        "]";
         
-        // يجب حجز مساحة في الذاكرة لكي لا تختفي السلسلة بعد انتهاء الدالة
+        // حجز مساحة ثابتة في الذاكرة (Heap)
         char* buffer = (char*)malloc(mock_json.length() + 1);
+        if (buffer == nullptr) return nullptr; // حماية ضد فشل الحجز
+        
         strcpy(buffer, mock_json.c_str());
         
         return buffer; 
+    }
+
+    // --- دالة ضرورية جداً لتنظيف الذاكرة ---
+    EXPORT void free_client_string(char* ptr) {
+        if (ptr != nullptr) {
+            free(ptr);
+            std::cout << "[DB Mock] Memory freed for JSON string." << std::endl;
+        }
     }
 }
