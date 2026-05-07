@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'add_client.dart';
 
 // -- الألوان --
 const kBackgroundColor = Color(0xFF0F171E);
@@ -331,8 +332,11 @@ class ClientRowWidget extends StatelessWidget {
 }
 
 // --- الهيدر (بدون تغيير كبير) ---
+// --- ويدجت الهيدر المحدث ---
+// --- ويدجت الهيدر المحدث ليعمل كـ Popup ---
 class ClientsHeaderWidget extends StatelessWidget {
   const ClientsHeaderWidget({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -341,15 +345,35 @@ class ClientsHeaderWidget extends StatelessWidget {
         const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Client Management', style: TextStyle(color: kTextPrimary, fontSize: 28, fontWeight: FontWeight.bold)),
-            Text('Manage your customers and track their data', style: TextStyle(color: kTextSecondary, fontSize: 16)),
+            Text('Client Management',
+                style: TextStyle(color: kTextPrimary, fontSize: 28, fontWeight: FontWeight.bold)),
+            SizedBox(height: 4),
+            Text('Manage your customers and track their purchases',
+                style: TextStyle(color: kTextSecondary, fontSize: 16)),
           ],
         ),
         ElevatedButton.icon(
-          onPressed: () {},
+          onPressed: () {
+            // --- التعديل هنا: فتح النافذة المنبثقة بدلاً من صفحة كاملة ---
+            showDialog(
+              context: context,
+              barrierDismissible: true, // يغلق عند الضغط خارج الصندوق
+              builder: (BuildContext context) {
+                return const Dialog(
+                  backgroundColor: Colors.transparent, // لجعل حواف التصميم تظهر بشكل صحيح
+                  child: AddClientPopup(), // استدعاء كود الـ Popup الذي صممناه
+                );
+              },
+            );
+          },
           icon: const Icon(Icons.person_add_alt_1_outlined, size: 20),
           label: const Text('Add New Client'),
-          style: ElevatedButton.styleFrom(backgroundColor: kAccentColor, foregroundColor: kTextPrimary, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: kAccentColor,
+            foregroundColor: kTextPrimary,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
         ),
       ],
     );
