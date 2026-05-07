@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-// -- 1. الألوان المطابقة للتصميم الاحترافي --
+// -- الألوان --
 const kBackgroundColor = Color(0xFF0F171E);
 const kCardColor = Color(0xFF192229);
 const kAccentColor = Color(0xFF007AFF);
@@ -8,7 +8,6 @@ const kTextPrimary = Colors.white;
 const kTextSecondary = Color(0xFF8E99A3);
 const kDividerColor = Color(0xFF2C363F);
 
-// ألوان الحالات (Badges)
 const kGreenBg = Color(0xFF0B251E);
 const kGreenText = Color(0xFF2ECC71);
 const kOrangeBg = Color(0xFF2E2417);
@@ -16,10 +15,23 @@ const kOrangeText = Color(0xFFF39C12);
 const kRedBg = Color(0xFF2C1A1D);
 const kRedText = Color(0xFFE74C3C);
 
+void main() => runApp(const MyApp());
 
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark().copyWith(scaffoldBackgroundColor: kBackgroundColor),
+      home: const ClientsScreen(),
+    );
+  }
+}
 
-// -- 2. الموديل --
+// -- الموديل --
 class Client {
+  final String id; // معرف فريد للحذف
   final String initial;
   final Color initialColor;
   final String name;
@@ -32,6 +44,7 @@ class Client {
   final String status;
 
   Client({
+    required this.id,
     required this.initial,
     required this.initialColor,
     required this.name,
@@ -45,41 +58,57 @@ class Client {
   });
 }
 
-// -- 3. الشاشة الأساسية --
+// -- الشاشة الأساسية --
 class ClientsScreen extends StatefulWidget {
   const ClientsScreen({super.key});
-
   @override
   State<ClientsScreen> createState() => _ClientsScreenState();
 }
 
 class _ClientsScreenState extends State<ClientsScreen> {
-  List<Client> filteredClients = [];
-  final TextEditingController _searchController = TextEditingController();
+  // القائمة الأصلية (مصدر البيانات الثابت للإحصائيات)
+  final List<Client> _allClients = [
+    Client(id: '1', initial: 'J', initialColor: Colors.blue, name: 'John Doe', location: 'New York', email: 'john@email.com', phone: '+1 234', totalPurchases: 12450, pendingDebt: 0, installments: 0, status: 'Active'),
+    Client(id: '2', initial: 'S', initialColor: Colors.purple, name: 'Sarah Smith', location: 'Los Angeles', email: 'sarah@email.com', phone: '+1 567', totalPurchases: 8900, pendingDebt: 1200, installments: 2, status: 'Has Debt'),
+    Client(id: '3', initial: 'M', initialColor: Colors.orange, name: 'Mike Ross', location: 'Chicago', email: 'mike@email.com', phone: '+1 888', totalPurchases: 5000, pendingDebt: 3000, installments: 5, status: 'Overdue'),
+  ];
+
+  List<Client> _filteredClients = [];
+  String _searchQuery = "";
+  String _selectedFilter = "All";
 
   @override
   void initState() {
     super.initState();
-    filteredClients = _mockClients;
+    _filteredClients = _allClients;
   }
 
-  void _filterClients(String query) {
+  // تحديث البحث والفلترة معاً
+  void _applyFilters() {
     setState(() {
-      filteredClients = _mockClients
-          .where((client) =>
-              client.name.toLowerCase().contains(query.toLowerCase()) ||
-              client.email.toLowerCase().contains(query.toLowerCase()))
-          .toList();
+      _filteredClients = _allClients.where((client) {
+        final matchesSearch = client.name.toLowerCase().contains(_searchQuery.toLowerCase()) || 
+                             client.email.toLowerCase().contains(_searchQuery.toLowerCase());
+        final matchesStatus = _selectedFilter == "All" || client.status == _selectedFilter;
+        return matchesSearch && matchesStatus;
+      }).toList();
+    });
+  }
+
+  void _deleteClient(String id) {
+    setState(() {
+      _allClients.removeWhere((c) => c.id == id);
+      _applyFilters();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // حساب الإحصائيات الفعلي
-    int totalCount = filteredClients.length;
-    int activeCount = filteredClients.where((c) => c.status == 'Active').length;
-    int debtCount = filteredClients.where((c) => c.pendingDebt > 0).length;
-    double sumDebt = filteredClients.fold(0, (sum, c) => sum + c.pendingDebt);
+    // حساب الإحصائيات من القائمة الكاملة (_allClients) لتبقى ثابتة
+    int totalCount = _allClients.length;
+    int activeCount = _allClients.where((c) => c.status == 'Active').length;
+    int debtCount = _allClients.where((c) => c.pendingDebt > 0).length;
+    double sumDebt = _allClients.fold(0, (sum, c) => sum + c.pendingDebt);
 
     return Scaffold(
       body: Padding(
@@ -96,13 +125,23 @@ class _ClientsScreenState extends State<ClientsScreen> {
               totalDebt: sumDebt,
             ),
             const SizedBox(height: 30),
+            // شريط البحث مع زر الفلترة
             SearchBarWidget(
-              controller: _searchController,
-              onChanged: _filterClients,
+              onSearchChanged: (val) {
+                _searchQuery = val;
+                _applyFilters();
+              },
+              onFilterChanged: (val) {
+                _selectedFilter = val;
+                _applyFilters();
+              },
             ),
             const SizedBox(height: 24),
             Expanded(
-              child: ClientsTableWidget(clients: filteredClients),
+              child: ClientsTableWidget(
+                clients: _filteredClients,
+                onDelete: _deleteClient,
+              ),
             ),
           ],
         ),
@@ -111,102 +150,12 @@ class _ClientsScreenState extends State<ClientsScreen> {
   }
 }
 
-// --- ويدجت الهيدر ---
-class ClientsHeaderWidget extends StatelessWidget {
-  const ClientsHeaderWidget({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Client Management',
-                style: TextStyle(color: kTextPrimary, fontSize: 28, fontWeight: FontWeight.bold)),
-            SizedBox(height: 4),
-            Text('Manage your customers and track their purchases',
-                style: TextStyle(color: kTextSecondary, fontSize: 16)),
-          ],
-        ),
-        ElevatedButton.icon(
-          onPressed: () {},
-          icon: const Icon(Icons.person_add_alt_1_outlined, size: 20),
-          label: const Text('Add New Client'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: kAccentColor,
-            foregroundColor: kTextPrimary,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// --- ويدجت الكروت ---
-class ClientsStatsCardsWidget extends StatelessWidget {
-  final int total;
-  final int active;
-  final int withDebt;
-  final double totalDebt;
-
-  const ClientsStatsCardsWidget({super.key, required this.total, required this.active, required this.withDebt, required this.totalDebt});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _buildStatCard(Icons.person_add_outlined, kAccentColor, 'Total Clients', total.toString()),
-        const SizedBox(width: 20),
-        _buildStatCard(Icons.check_circle_outline, kGreenText, 'Active', active.toString()),
-        const SizedBox(width: 20),
-        _buildStatCard(Icons.error_outline, kOrangeText, 'With Debt', withDebt.toString()),
-        const SizedBox(width: 20),
-        _buildStatCard(Icons.attach_money, kRedText, 'Total Debt', '\$${(totalDebt / 1000).toStringAsFixed(1)}K'),
-      ],
-    );
-  }
-
-  Widget _buildStatCard(IconData icon, Color color, String title, String value) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: kCardColor.withOpacity(0.4),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kDividerColor, width: 1),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: kBackgroundColor, borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(color: kTextSecondary, fontSize: 14)),
-                const SizedBox(height: 4),
-                Text(value, style: const TextStyle(color: kTextPrimary, fontSize: 24, fontWeight: FontWeight.bold)),
-              ],
-            )
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// --- ويدجت البحث ---
+// --- ويدجت البحث والفلترة ---
 class SearchBarWidget extends StatelessWidget {
-  final TextEditingController controller;
-  final Function(String) onChanged;
-  const SearchBarWidget({super.key, required this.controller, required this.onChanged});
+  final Function(String) onSearchChanged;
+  final Function(String) onFilterChanged;
+
+  const SearchBarWidget({super.key, required this.onSearchChanged, required this.onFilterChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -219,49 +168,64 @@ class SearchBarWidget extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: TextField(
-              controller: controller,
-              onChanged: onChanged,
+              onChanged: onSearchChanged,
               decoration: const InputDecoration(hintText: 'Search by name or email...', hintStyle: TextStyle(color: kTextSecondary), border: InputBorder.none),
             ),
           ),
-          const Icon(Icons.tune, color: kTextSecondary, size: 20),
-          const SizedBox(width: 8),
-          const Text('Filters', style: TextStyle(color: kTextSecondary)),
+          // زر الفلترة الاحترافي
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.tune, color: kTextSecondary, size: 20),
+            tooltip: "Filter Status",
+            onSelected: onFilterChanged,
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: "All", child: Text("All Clients")),
+              const PopupMenuItem(value: "Active", child: Text("Active")),
+              const PopupMenuItem(value: "Has Debt", child: Text("Has Debt")),
+              const PopupMenuItem(value: "Overdue", child: Text("Overdue")),
+            ],
+          ),
+          const Text('Filter', style: TextStyle(color: kTextSecondary)),
         ],
       ),
     );
   }
 }
 
-// --- الجدول والصفوف ---
+// --- الجدول ---
 class ClientsTableWidget extends StatelessWidget {
   final List<Client> clients;
-  const ClientsTableWidget({super.key, required this.clients});
+  final Function(String) onDelete;
+  const ClientsTableWidget({super.key, required this.clients, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
-            children: const [
+            children: [
               Expanded(flex: 3, child: Text('Client', style: TextStyle(color: kTextSecondary))),
               Expanded(flex: 3, child: Text('Contact', style: TextStyle(color: kTextSecondary))),
               Expanded(flex: 2, child: Text('Total Purchases', style: TextStyle(color: kTextSecondary))),
               Expanded(flex: 2, child: Text('Pending Debt', style: TextStyle(color: kTextSecondary))),
               Expanded(flex: 2, child: Text('Installments', style: TextStyle(color: kTextSecondary))),
               Expanded(flex: 2, child: Text('Status', style: TextStyle(color: kTextSecondary))),
-              SizedBox(width: 40, child: Center(child: Text('Actions', style: TextStyle(color: kTextSecondary)))),
+              SizedBox(width: 80, child: Center(child: Text('Actions', style: TextStyle(color: kTextSecondary)))),
             ],
           ),
         ),
         const Divider(color: kDividerColor, height: 1),
         Expanded(
-          child: ListView.builder(
-            itemCount: clients.length,
-            itemBuilder: (context, index) => ClientRowWidget(client: clients[index]),
-          ),
+          child: clients.isEmpty 
+            ? const Center(child: Text("No clients found", style: TextStyle(color: kTextSecondary)))
+            : ListView.builder(
+                itemCount: clients.length,
+                itemBuilder: (context, index) => ClientRowWidget(
+                  client: clients[index],
+                  onDelete: () => onDelete(clients[index].id),
+                ),
+              ),
         ),
       ],
     );
@@ -270,7 +234,8 @@ class ClientsTableWidget extends StatelessWidget {
 
 class ClientRowWidget extends StatelessWidget {
   final Client client;
-  const ClientRowWidget({super.key, required this.client});
+  final VoidCallback onDelete;
+  const ClientRowWidget({super.key, required this.client, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +244,7 @@ class ClientRowWidget extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Row(
         children: [
-          // Client
+          // Client Info
           Expanded(
             flex: 3,
             child: Row(
@@ -296,7 +261,7 @@ class ClientRowWidget extends StatelessWidget {
               ],
             ),
           ),
-          // Contact
+          // Contact Info
           Expanded(
             flex: 3,
             child: Column(
@@ -307,30 +272,22 @@ class ClientRowWidget extends StatelessWidget {
               ],
             ),
           ),
-          // Purchases
           Expanded(flex: 2, child: Text('\$${client.totalPurchases.toInt()}')),
-          // Debt
           Expanded(
             flex: 2,
             child: Text('\$${client.pendingDebt.toInt()}', style: TextStyle(color: client.pendingDebt > 0 ? kOrangeText : kGreenText, fontWeight: FontWeight.bold)),
           ),
-          // --- ضبط الـ Padding للمسافات المطلوبة ---
           Expanded(
             flex: 2,
             child: UnconstrainedBox(
               alignment: Alignment.centerLeft,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1B2E3D),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: kAccentColor.withOpacity(0.3)),
-                ),
-                child: Text('${client.installments} active', style: const TextStyle(color: Color(0xFF5EADFF), fontSize: 12)),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: const Color(0xFF1B2E3D), borderRadius: BorderRadius.circular(20)),
+                child: Text('${client.installments} active', style: const TextStyle(color: Color(0xFF5EADFF), fontSize: 11)),
               ),
             ),
           ),
-          const SizedBox(width: 8), // مسافة ثابتة بين الحقلين
           Expanded(
             flex: 2,
             child: UnconstrainedBox(
@@ -338,34 +295,106 @@ class ClientRowWidget extends StatelessWidget {
               child: _buildStatusBadge(client.status),
             ),
           ),
-          const SizedBox(width: 40, child: Icon(Icons.more_vert, color: kTextSecondary)),
+          // Actions: تعديل وحذف
+          SizedBox(
+            width: 80,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, color: kAccentColor, size: 20),
+                  onPressed: () { /* وظيفة التعديل هنا */ },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: kRedText, size: 20),
+                  onPressed: onDelete,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildStatusBadge(String status) {
-    Color bg = kGreenBg; Color text = kGreenText; IconData icon = Icons.check_circle;
-    if (status == 'Has Debt') { bg = kOrangeBg; text = kOrangeText; icon = Icons.info_outline; }
-    if (status == 'Overdue') { bg = kRedBg; text = kRedText; icon = Icons.error_outline; }
+    Color bg = kGreenBg; Color text = kGreenText;
+    if (status == 'Has Debt') { bg = kOrangeBg; text = kOrangeText; }
+    if (status == 'Overdue') { bg = kRedBg; text = kRedText; }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: text),
-          const SizedBox(width: 6),
-          Text(status, style: TextStyle(color: text, fontSize: 12, fontWeight: FontWeight.bold)),
-        ],
-      ),
+      child: Text(status, style: TextStyle(color: text, fontSize: 11, fontWeight: FontWeight.bold)),
     );
   }
 }
 
-// -- بيانات تجريبية --
-final List<Client> _mockClients = [
-  Client(initial: 'J', initialColor: Colors.blue, name: 'John Doe', location: 'New York', email: 'john@email.com', phone: '+1 234', totalPurchases: 12450, pendingDebt: 0, installments: 0, status: 'Active'),
-  Client(initial: 'S', initialColor: Colors.purple, name: 'Sarah Smith', location: 'Los Angeles', email: 'sarah@email.com', phone: '+1 567', totalPurchases: 8900, pendingDebt: 1200, installments: 2, status: 'Has Debt'),
-];
+// --- الهيدر (بدون تغيير كبير) ---
+class ClientsHeaderWidget extends StatelessWidget {
+  const ClientsHeaderWidget({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Client Management', style: TextStyle(color: kTextPrimary, fontSize: 28, fontWeight: FontWeight.bold)),
+            Text('Manage your customers and track their data', style: TextStyle(color: kTextSecondary, fontSize: 16)),
+          ],
+        ),
+        ElevatedButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.person_add_alt_1_outlined, size: 20),
+          label: const Text('Add New Client'),
+          style: ElevatedButton.styleFrom(backgroundColor: kAccentColor, foregroundColor: kTextPrimary, padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18)),
+        ),
+      ],
+    );
+  }
+}
+
+// --- كروت الإحصائيات ---
+class ClientsStatsCardsWidget extends StatelessWidget {
+  final int total; final int active; final int withDebt; final double totalDebt;
+  const ClientsStatsCardsWidget({super.key, required this.total, required this.active, required this.withDebt, required this.totalDebt});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _buildStatCard(Icons.people_outline, kAccentColor, 'Total Clients', total.toString()),
+        const SizedBox(width: 16),
+        _buildStatCard(Icons.check_circle_outline, kGreenText, 'Active', active.toString()),
+        const SizedBox(width: 16),
+        _buildStatCard(Icons.warning_amber_rounded, kOrangeText, 'With Debt', withDebt.toString()),
+        const SizedBox(width: 16),
+        _buildStatCard(Icons.monetization_on_outlined, kRedText, 'Total Debt', '\$${(totalDebt / 1000).toStringAsFixed(1)}K'),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(IconData icon, Color color, String title, String value) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(color: kCardColor.withOpacity(0.4), borderRadius: BorderRadius.circular(16), border: Border.all(color: kDividerColor)),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 30),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(color: kTextSecondary, fontSize: 12)),
+                Text(value, style: const TextStyle(color: kTextPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
